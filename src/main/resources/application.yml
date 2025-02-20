@@ -1,0 +1,138 @@
+server:
+  tomcat:
+    threads:
+      max: 400
+    max-connections: 10000
+  port: 8081
+redis:
+  host: localhost
+  port: 6379
+  password:
+  database: 0
+  connection-pool-size: 5
+  connect-timeout: 10000
+  retry-attempts: 3
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+    endpoint:
+      health:
+        show-details: always
+      prometheus:
+        enable: true
+    metrics:
+      web:
+        server:
+          request:
+            metric-name: "http.server.requests"  # Đây là cấu hình quan trọng
+            autotime:
+              enabled: true
+              percentiles: 0.5,0.95,0.99
+      distribution:
+        percentiles-histogram:
+          http.server.requests: true
+        slo:
+          http.server.requests: 10ms,100ms,500ms
+      enable:
+        jvm: true
+        process: true
+        system: true
+        http: true
+        kafka: true
+      tags:
+        kafka:
+          consumer:
+            enabled: true
+            extraTags:
+              client-id: true
+              topic: true
+              partition: true
+          producer:
+            enabled: true
+            extraTags:
+              client-id: true
+              topic: true
+spring:
+  kafka:
+    # Cấu hình chung
+    bootstrap-servers: localhost:29092
+  #
+#    # Cấu hình Producer
+#    producer:
+#      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+#      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+#      acks: all
+#      retries: 3
+#      batch-size: 16384
+#      buffer-memory: 33554432
+#      properties:
+#        enable.idempotence: true
+#        max.in.flight.requests.per.connection: 5
+#
+#    # Cấu hình Consumer
+#    consumer:
+#      group-id: booking-processor-group
+#      auto-offset-reset: earliest
+#      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+#      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+#      properties:
+#        spring.json.trusted.packages: "*"
+#        isolation.level: read_committed
+#        max.poll.records: 500
+#        fetch.min.bytes: 1
+#        fetch.max.wait.ms: 500
+  datasource:
+    type: com.zaxxer.hikari.HikariDataSource
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/booking_db
+    username: booking_user
+    password: booking_password
+    hikari:
+      pool-name: BookingHikariPool
+      auto-commit: true
+      connection-timeout: 20000
+      minimum-idle: 5
+      maximum-pool-size: 10
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      connection-test-query: SELECT 1
+      data-source-properties:
+        cachePrepStmts: true
+        prepStmtCacheSize: 250
+        prepStmtCacheSqlLimit: 2048
+        useServerPrepStmts: true
+
+    jpa:
+      open-in-view: false
+      database-platform: org.hibernate.dialect.PostgreSQLDialect
+      properties:
+        hibernate:
+          format_sql: true
+          connection:
+            provider_disables_autocommit: false
+      show-sql: true
+      hibernate:
+        ddl-auto: update
+
+  resilience4j.ratelimiter:
+    configs:
+      default:
+        registerHealthIndicator: false
+        limitForPeriod: 3
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0
+        eventConsumerBufferSize: 100
+    instances:
+      backendA:
+        baseConfig: default
+      backendB:
+        limitForPeriod: 6
+        limitRefreshPeriod: 500ms
+        timeoutDuration: 3s
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
